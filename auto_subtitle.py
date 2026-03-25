@@ -9,7 +9,6 @@ import torch
 import torchaudio
 from tqdm import tqdm
 
-import transformers
 from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
@@ -302,7 +301,7 @@ class Translator:
     def __init__(self):
         self.device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
-        model_name = "facebook/nllb-200-distilled-600M"
+        model_name = "facebook/nllb-200-distilled-1.3B"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         config = AutoConfig.from_pretrained(model_name)
         config.tie_word_embeddings = False
@@ -497,7 +496,7 @@ def transcribe_audio_file(
 
     if translator is not None and src_code and tgt_code:
         translatable_indices = [idx for idx, seg in enumerate(adjusted_segments) if seg["text"].strip()]
-        for i in range(0, len(translatable_indices), batch_size):
+        for i in tqdm(range(0, len(translatable_indices), batch_size)):
             batch_indices = translatable_indices[i : i + batch_size]
             batch_texts = [adjusted_segments[idx]["text"] for idx in batch_indices]
             translated_batch = translator(batch_texts, src_code, tgt_code)
