@@ -8,12 +8,15 @@ import gdown
 import torch
 import torchaudio
 from tqdm import tqdm
+
+import transformers
 from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     WhisperForConditionalGeneration,
     WhisperProcessor,
     AutoConfig,
+    BitsAndBytesConfig,
 )
 
 
@@ -278,9 +281,19 @@ def write_srt(segments, out_path: Path):
 
 def build_whisper(model_name: str = "openai/whisper-large-v3", device: int = 0):
     proc = WhisperProcessor.from_pretrained(model_name)
-    model = WhisperForConditionalGeneration.from_pretrained(model_name, use_safetensors=False, torch_dtype=torch.float16)
+    # Define the 8-bit config here
+    bnb_config = BitsAndBytesConfig(
+        load_in_8bit=True  # The argument goes HERE
+    )
+    model = WhisperForConditionalGeneration.from_pretrained(
+      model_name, 
+      use_safetensors=False, 
+      device_map="auto",
+      quantization_config=bnb_config,
+      )
+    
     device_str = f"cuda:{device}" if torch.cuda.is_available() else "cpu"
-    model.to(device_str, dtype=torch.float16 if "cuda" in device_str else torch.float32)
+    model.to(device_str)
     model.eval()
     return proc, model, device_str
 
@@ -289,7 +302,7 @@ class Translator:
     def __init__(self):
         self.device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
-        model_name = "facebook/nllb-200-3.3B"
+        model_name = "facebook/nllb-200-distilled-600M"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         config = AutoConfig.from_pretrained(model_name)
         config.tie_word_embeddings = False
