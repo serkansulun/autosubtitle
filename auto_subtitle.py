@@ -305,7 +305,15 @@ class Translator:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         config = AutoConfig.from_pretrained(model_name)
         config.tie_word_embeddings = False
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, config=config, use_safetensors=False, torch_dtype=torch.float16)
+        bnb_config = BitsAndBytesConfig(
+            load_in_8bit=True
+        )
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name, config=config, 
+            use_safetensors=False, 
+            torch_dtype=torch.float16,
+            quantization_config=bnb_config,
+            )
         self.model.to(self.device)
 
     def get_device(self):
